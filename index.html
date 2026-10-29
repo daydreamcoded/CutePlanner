@@ -47,4 +47,38 @@ function setTimer(min){clearInterval(timer);running=false;seconds=min*60;$('time
 function renderThemes(){const grid=$('themeGrid');grid.innerHTML='';Object.entries(themes).forEach(([id,t])=>{const b=document.createElement('button');b.className='swatch';b.innerHTML='<div class="swatch-color" style="background:'+t.shell+'"></div>';const label=document.createElement('span');label.textContent=t.label;b.append(label);b.onclick=()=>applyTheme(id);grid.append(b)})}function applyTheme(id){const t=themes[id]||themes.pink;data.theme=id;document.documentElement.style.setProperty('--shell',t.shell);document.documentElement.style.setProperty('--pink',t.shell);document.body.style.background='radial-gradient(ellipse at 10% 5%,#fff 0,transparent 34%),linear-gradient(145deg,#fffaf2,'+t.bg+' 60%,#f4edf9)';save()}renderThemes();applyTheme(data.theme||'pink');$('exportData').onclick=()=>download('egg-planner-backup.json',JSON.stringify(data,null,2),'application/json');$('importDataBtn').onclick=()=>$('importData').click();$('importData').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const incoming=JSON.parse(await f.text());if(!Array.isArray(incoming.tasks)||!Array.isArray(incoming.events))throw Error('invalid');data={...defaults,...incoming};save();applyTheme(data.theme);renderCalendar();$('journal').value=data.journal||'';alert('Your planner backup is restored ♡')}catch(err){alert('That backup could not be read. Choose an Egg Planner JSON backup.')}e.target.value=''};
 const savedJournal=data.journal||'';$('journal').value=savedJournal;renderTasks();renderPet();renderCalendar();renderUpcoming();if(data.eggName)document.title=data.eggName+' ♡';
 })();
+</script>
+<script>
+/* Standalone egg controls: kept separate so the physical controls stay usable. */
+(function(){
+  var items=[["TODAY","today"],["CALENDAR","calendar"],["PET","pet"],["JOURNAL","type"],["FOCUS","focus"],["STYLE","customize"]];
+  var index=0;
+  function show(view){
+    items.forEach(function(item){
+      var section=document.getElementById("view-"+item[1]);
+      if(section) section.classList.toggle("hidden",item[1]!==view);
+    });
+    document.querySelectorAll("[data-nav]").forEach(function(button){
+      button.classList.toggle("active",button.getAttribute("data-nav")===view);
+    });
+    if(view==="calendar" && document.getElementById("monthLabel") && !document.getElementById("monthLabel").textContent){
+      var d=new Date(); document.getElementById("monthLabel").textContent=d.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    }
+    var target=document.querySelector(".panel");
+    if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  function draw(){
+    var label=document.getElementById("eggMenuName");
+    var message=document.getElementById("screenMessage");
+    if(label) label.textContent=items[index][0];
+    if(message) message.textContent="SELECT "+items[index][0];
+  }
+  function move(delta){index=(index+delta+items.length)%items.length;draw();}
+  function choose(){show(items[index][1]);}
+  ["eggPrev","eggLeft"].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener("click",function(e){e.preventDefault();move(-1);});});
+  ["eggNext","eggRight"].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener("click",function(e){e.preventDefault();move(1);});});
+  ["eggSelect","eggOk"].forEach(function(id){var b=document.getElementById(id);if(b)b.addEventListener("click",function(e){e.preventDefault();choose();});});
+  document.querySelectorAll("[data-nav]").forEach(function(button){button.addEventListener("click",function(){var view=button.getAttribute("data-nav");var found=items.findIndex(function(item){return item[1]===view;});if(found>=0){index=found;draw();show(view);}});});
+  draw();
+})();
 </script></body></html>
