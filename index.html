@@ -126,4 +126,40 @@ const savedJournal=data.journal||'';$('journal').value=savedJournal;renderTasks(
   var plannerPanel=document.getElementById("plannerPanel");if(plannerPanel)plannerPanel.classList.remove("egg-open");
   draw();
 })();
-</script></body></html>
+</script><script>
+/* Reliable egg-first navigation and recovery for the core planner actions. */
+(function(){
+  const $=id=>document.getElementById(id);
+  const panel=$('plannerPanel');
+  const sections=['today','calendar','pet','type','focus','customize'];
+  const names=['TODAY','CALENDAR','PET','JOURNAL','FOCUS','STYLE'];
+  let selected=0;
+  function openSection(view){
+    const idx=sections.indexOf(view); if(idx<0)return;
+    selected=idx;
+    if(panel)panel.classList.add('egg-open');
+    sections.forEach(v=>{const el=$('view-'+v);if(el)el.classList.toggle('hidden',v!==view)});
+    document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.getAttribute('data-nav')===view));
+    const label=$('eggMenuName'),msg=$('screenMessage');
+    if(label)label.textContent=names[idx];if(msg)msg.textContent='OPENING '+names[idx];
+    if(view==='calendar'&&$('monthLabel')&&!$('monthLabel').textContent){const d=new Date();$('monthLabel').textContent=d.toLocaleDateString(undefined,{month:'long',year:'numeric'})}
+    if(view==='calendar'&&typeof window.__eggRenderCalendar==='function')window.__eggRenderCalendar();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function move(d){selected=(selected+d+sections.length)%sections.length; if($('eggMenuName'))$('eggMenuName').textContent=names[selected];if($('screenMessage'))$('screenMessage').textContent='SELECT '+names[selected]}
+  function setPetName(){const current=localStorage.getItem('eggPlanner_v1');let data={};try{data=JSON.parse(current||'{}')}catch(e){}const value=prompt('What should we call your little friend?',data.petName||'Mochi');if(!value||!value.trim())return;data.petName=value.trim().slice(0,22);try{localStorage.setItem('eggPlanner_v1',JSON.stringify({...data}))}catch(e){};if($('screenPetName'))$('screenPetName').textContent=data.petName+' ♡';if($('petNameTitle'))$('petNameTitle').textContent=data.petName;if($('petMessage'))$('petMessage').textContent='Hi, '+data.petName+'! ♡';}
+  const bind=(id,fn)=>{const el=$(id);if(el)el.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();try{fn()}catch(err){console.error(err);alert('That action hit an error. Please refresh and try again.')}}};
+  bind('eggPrev',()=>move(-1));bind('eggLeft',()=>move(-1));bind('eggNext',()=>move(1));bind('eggRight',()=>move(1));
+  bind('eggSelect',()=>openSection(sections[selected]));bind('eggOk',()=>openSection(sections[selected]));
+  bind('eggBack',()=>{if(panel)panel.classList.remove('egg-open');window.scrollTo({top:0,behavior:'smooth'})});
+  document.querySelectorAll('[data-nav]').forEach(b=>{b.onclick=e=>{e.preventDefault();e.stopImmediatePropagation();openSection(b.getAttribute('data-nav'))}});
+  bind('petRename',setPetName);
+  bind('saveEggName',()=>{const v=$('renameEgg')?.value.trim()||'My little egg';let d={};try{d=JSON.parse(localStorage.getItem('eggPlanner_v1')||'{}')}catch(e){}d.eggName=v;try{localStorage.setItem('eggPlanner_v1',JSON.stringify(d))}catch(e){}document.title=v+' ♡';alert('Egg name saved ♡')});
+  bind('petFeed',()=>{let d={};try{d=JSON.parse(localStorage.getItem('eggPlanner_v1')||'{}')}catch(e){}d.hearts=Math.min(100,(d.hearts||12)+5);localStorage.setItem('eggPlanner_v1',JSON.stringify(d));if($('screenMood'))$('screenMood').textContent='MOOD: SPARKLY';if($('petMessage'))$('petMessage').textContent='Yum! Your pet feels loved ♡';if($('petProgress'))$('petProgress').style.width=d.hearts+'%'});
+  bind('petPlay',()=>{let d={};try{d=JSON.parse(localStorage.getItem('eggPlanner_v1')||'{}')}catch(e){}d.hearts=Math.min(100,(d.hearts||12)+2);localStorage.setItem('eggPlanner_v1',JSON.stringify(d));if($('petMessage'))$('petMessage').textContent='Playtime! You two are a team ♡';if($('petProgress'))$('petProgress').style.width=d.hearts+'%'});
+  // Always boot to the egg itself.
+  if(panel)panel.classList.remove('egg-open');
+  move(0);
+})();
+</script>
+</body></html>
